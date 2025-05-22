@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Group + Private Chat</title>
+  <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+  <style>
+    body { font-family: sans-serif; padding: 20px; }
+    .section { margin-bottom: 40px; }
+    .messages { border: 1px solid #ccc; padding: 10px; height: 150px; overflow-y: auto; margin-top: 10px; }
+    input { margin: 5px 0; padding: 5px; width: 100%; }
+    button { padding: 6px 10px; }
+    .msg { margin: 3px 0; }
+    .sender { font-weight: bold; }
+  </style>
+</head>
+<body>
+
+  <div class="section">
+    <h2>Group Chat</h2>
+    <input type="text" id="groupMessageInput" placeholder="Enter group message">
+    <button onclick="sendGroupMessage()">Send to Group</button>
+    <div id="groupMessages" class="messages"></div>
+  </div>
+
+  <div class="section">
+    <h2>Private Chat</h2>
+    <input type="text" id="toUser" placeholder="Send to (username)">
+    <input type="text" id="privateMessageInput" placeholder="Enter private message">
+    <button onclick="sendPrivateMessage()">Send Private</button>
+    <div id="privateMessages" class="messages"></div>
+  </div>
+
+  <script>
+    let stompClient = null;
+
+    function connect() {
+      const socket = new SockJS('/ws'); // must match Spring endpoint
+      stompClient = Stomp.over(socket);
+
+      stompClient.connect({}, function () {
+        // Subscribe to group chat
+        stompClient.subscribe('/topic/group', function (msg) {
+          const message = JSON.parse(msg.body);
+          appendMessage('groupMessages', message.sender, message.content);
+        });
+
+        // Subscribe to private messages for this user
+        stompClient.subscribe('/user/queue/private', function (msg) {
+          const message = JSON.parse(msg.body);
+          appendMessage('privateMessages', message.sender + " (private)", message.content);
+        });
+      });
+    }
+
+    function sendGroupMessage() {
+      const sender = "";
+      const content = document.getElementById('groupMessageInput').value;
+      const timestamp = new Date().toISOString().slice(0,19);
+      stompClient.send("/app/chat", {}, JSON.stringify({ sender, content, timestamp }));
+      document.getElementById('groupMessageInput').value = '';
+    }
+
+    function sendPrivateMessage() {
+      const sender = "";
+      const content = document.getElementById('privateMessageInput').value;
+      const recipient = document.getElementById('toUser').value;
+      const timestamp = new Date().toISOString().slice(0,19);
+      stompClient.send(`/app/chat.private.${recipient}`, {}, JSON.stringify({ sender, content, timestamp }));
+      appendMessage('privateMessages', 'You (to ' + recipient + ')', content);
+      document.getElementById('privateMessageInput').value = '';
+    }
+
+    function appendMessage(containerId, sender, content) {
+      const div = document.createElement('div');
+      div.classList.add('msg');
+      div.innerHTML = `<span class="sender">${sender}:</span> ${content}`;
+      document.getElementById(containerId).appendChild(div);
+    }
+
+    connect();
+  </script>
+</body>
+</html>
