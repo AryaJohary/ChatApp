@@ -25,7 +25,7 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain handleSecurityFilterChain(HttpSecurity http) throws Exception {
         http.authorizeHttpRequests(auth -> auth
-                .requestMatchers("/signup", "/login").permitAll()
+                .requestMatchers("/signup", "/login", "/usersList").permitAll()
                 .anyRequest().authenticated())
                 .userDetailsService(userDetailService)
                 .logout(Customizer.withDefaults())
