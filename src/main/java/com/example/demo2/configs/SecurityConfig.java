@@ -1,36 +1,41 @@
 package com.example.demo2.configs;
 
-import java.util.Collections;
-
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.core.userdetails.User;
-import org.springframework.security.provisioning.InMemoryUserDetailsManager;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+
+import com.example.demo2.services.CustomUserDetailService;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Configuration
 @EnableWebSecurity
+@Slf4j
+@RequiredArgsConstructor
 public class SecurityConfig {
+
+    private final CustomUserDetailService userDetailService;
 
     @Bean
     public SecurityFilterChain handleSecurityFilterChain(HttpSecurity http) throws Exception {
         http.authorizeHttpRequests(auth -> auth
-                .requestMatchers("/index.html", "/ws/**").permitAll()
+                .requestMatchers("/signup", "/login").permitAll()
                 .anyRequest().authenticated())
-                .formLogin(form -> form.defaultSuccessUrl("/index.html", true))
+                .userDetailsService(userDetailService)
                 .logout(Customizer.withDefaults())
                 .csrf(csrf -> csrf.disable());
         return http.build();
     }
 
     @Bean
-    public InMemoryUserDetailsManager userDetailsManager() {
-        User user1 = new User("arya1", "{noop}arya1", Collections.emptyList());
-        User user2 = new User("arya2", "{noop}arya2", Collections.emptyList());
-        return new InMemoryUserDetailsManager(user1, user2);
+    public PasswordEncoder passwordEncoder(){
+        return new BCryptPasswordEncoder();
     }
 
 }
